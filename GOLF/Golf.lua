@@ -346,8 +346,9 @@ end
 
 --Pings the removal of all flags
 function pings.syncFlagRemoval()
+    for k, v in pairs(flags.personalFlags) do flags.personalFlags[k] = nil end
     for _, i in ipairs(flags.activeFlags) do i:remove() end
-    for _, i in ipairs(flags.personalFlags) do i:remove() end
+    
 end
 
 
@@ -411,9 +412,9 @@ end
 function events.tick()
     if not player:isLoaded() then return end
     
-    if #flags.globalFlags == 0 then 
-        showFlags(true) 
-    elseif flags.place.sequence ~= 0 or golf.sequence ~= 0 then
+    if flags.place.sequence ~= 0 or golf.sequence ~= 0 then
+        
+
         if #flags.globalFlags ~= flags.globalFlagCount then
             flags.globalFlagCount = #flags.globalFlags
             showFlags(false) 
