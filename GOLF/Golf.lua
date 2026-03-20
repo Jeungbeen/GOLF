@@ -11,14 +11,16 @@
 
 
 --#region "Config"
-local ballParticle = "end_rod"
-local trajectoryParticle = "electric_spark"
-local hitSound = "entity.player.attack.sweep"
-local ballLandSound = "block.stone.hit"
+local ballParticle = "end_rod"    --Particle used to render the "ball"
+local trajectoryParticle = "electric_spark"    --Particle used to render the guideline
+local hitSound = "entity.player.attack.sweep"    --Sound playing when hitting the ball
+local ballLandSound = "block.stone.hit"    --Sound playing when ball lands
 
-local golfGUITitle = "GOLF by Jeungbeen"
-local golfGUIColor = "#8CDB90"
+local golfGUITitle = "GOLF by Jeungbeen"    --Header of the GUI, can be customized
+local golfGUIColor = "#8CDB90"    --Color of the GUI
 
+
+--Yet be implemented
 local FOXCameraIntegration = false
 local FOXCamera = CameraAPI
 
@@ -122,7 +124,7 @@ flags.place.potentialFlagRot = vec(0, 0, 0)
 flags.place.sequence = 0
 
 
---To be implemented
+--Yet be implemented
 local wind = {}
 wind.direction, wind.intensity = vec(0, 0, 0), 0
 
