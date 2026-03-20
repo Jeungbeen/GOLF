@@ -261,6 +261,41 @@ end
 
 
 
+--Shows all flags in the world
+---@param removeFlags boolean Set true to remove all active flags
+local function showFlags(removeFlags) 
+    for _, i in ipairs(flags.activeFlags) do i:remove() end
+    
+    if removeFlags then return end
+
+    for _, i in ipairs(flags.globalFlags) do 
+        local flag = models:newPart("Flag", "World")
+
+        flag:setPos((i[2] + vec(0, 0.1, 0)) * 16)
+
+
+        local flagDisplay = flag:newBlock("FlagDisplay")
+                :setBlock("red_banner")
+                :setRot(vec(0, -i[3].y, 0))
+                :setLight(15, 15)
+
+        local flagName = flag:newText("FlagName")
+                :setText(i[1])
+                :setShadow(true)
+                :setAlignment("CENTER")
+                :setRot(vec(0, -i[3].y - 180, 0))
+                :setPos(vec(vectors.angleToDir(-i[3] - 180).x * -9 + vectors.angleToDir(-i[3] - 180).z * 7, 35, vectors.angleToDir(-i[3] - 180).z * 9 + vectors.angleToDir(-i[3] - 180).x * 7))  
+                :setScale(0.4, 0.4, 0.4)
+                :setLight(15, 15)
+
+        table.insert(flags.activeFlags, flag)
+        table.insert(flags.activeFlags, flagDisplay)
+        table.insert(flags.activeFlags, flagName)
+    end
+end
+
+
+
 --Resets the entire golf sequence
 ---@param hardReset boolean Set true to reset every state to the beginning
 function pings.resetSequence(hardReset) 
@@ -309,39 +344,10 @@ function pings.syncFlagSequence(sequence)
     flags.place.sequence = sequence
 end
 
-
-
---Shows all flags in the world
----@param removeFlags boolean Set true to remove all active flags
-local function showFlags(removeFlags) 
+--Pings the removal of all flags
+function pings.syncFlagRemoval()
     for _, i in ipairs(flags.activeFlags) do i:remove() end
-    
-    if removeFlags then return end
-
-    for _, i in ipairs(flags.globalFlags) do 
-        local flag = models:newPart("Flag", "World")
-
-        flag:setPos((i[2] + vec(0, 0.1, 0)) * 16)
-
-
-        local flagDisplay = flag:newBlock("FlagDisplay")
-                :setBlock("red_banner")
-                :setRot(vec(0, -i[3].y, 0))
-                :setLight(15, 15)
-
-        local flagName = flag:newText("FlagName")
-                :setText(i[1])
-                :setShadow(true)
-                :setAlignment("CENTER")
-                :setRot(vec(0, -i[3].y - 180, 0))
-                :setPos(vec(vectors.angleToDir(-i[3] - 180).x * -9 + vectors.angleToDir(-i[3] - 180).z * 7, 35, vectors.angleToDir(-i[3] - 180).z * 9 + vectors.angleToDir(-i[3] - 180).x * 7))  
-                :setScale(0.4, 0.4, 0.4)
-                :setLight(15, 15)
-
-        table.insert(flags.activeFlags, flag)
-        table.insert(flags.activeFlags, flagDisplay)
-        table.insert(flags.activeFlags, flagName)
-    end
+    for _, i in ipairs(flags.personalFlags) do i:remove() end
 end
 
 
@@ -405,7 +411,9 @@ end
 function events.tick()
     if not player:isLoaded() then return end
     
-    if flags.place.sequence ~= 0 or golf.sequence ~= 0 then
+    if #flags.globalFlags == 0 then 
+        showFlags(true) 
+    elseif flags.place.sequence ~= 0 or golf.sequence ~= 0 then
         if #flags.globalFlags ~= flags.globalFlagCount then
             flags.globalFlagCount = #flags.globalFlags
             showFlags(false) 
@@ -637,6 +645,22 @@ function events.chat_send_message(msg)
             host:actionbar(toJson({{text = "GOLF reset!", bold = true, color = golfGUIColor}})) 
         return nil end
 
+        if string.sub(command, 1, 6) == ("remove") then
+            pings.syncFlagRemoval()
+            
+            host:actionbar(toJson({{text = "All Flags removed!", bold = true, color = golfGUIColor}})) 
+
+            if host:isHost() then
+                sounds["block.iron_trapdoor.open"]:setSubtitle(toJson({{text = "All Flags removed!", bold = true, color = golfGUIColor}})):setPos(player:getPos()):play():setVolume(0.7):setPitch(1.2) 
+            end
+        return nil end
+        
+        if string.sub(command, 1, 4) == ("help") then
+            if host:isHost() then
+                host:setChatMessage(1, toJson({{text = golf.GUIHeader .. "\n\n\n", bold = true, color = golfGUIColor}, {text = "Available Commands\n\n", color = "white"}, {text = "  /golf help  ->  Returns all commands\n  /golf reset  ->  Resets the game, does NOT reset your flags\n  /golf remove  ->  Removes ALL of your flags\n  /golf tp  ->  Teleports you to your golfball", color = "white", bold = false, italic = true}}), vec(1, 0, 0))
+            end
+        return nil end
+
         if flags.place.sequence == 2 and golf.sequence == 0 then
             func = string.sub(command, 1, #command)
             pings.addToPersonalFlags(func, flags.place.potentialFlagPos, flags.place.potentialFlagRot)
@@ -650,23 +674,6 @@ function events.chat_send_message(msg)
             flags.place.sequence = 1
             pings.syncFlagSequence(flags.place.sequence)
         return nil end
-
-        if string.sub(command, 1, 6) == ("remove") then
-            for k, v in pairs(flags.personalFlags) do flags.personalFlags[k] = nil end
-
-            host:actionbar(toJson({{text = "All Flags removed!", bold = true, color = golfGUIColor}})) 
-
-            if host:isHost() then
-                sounds["block.iron_trapdoor.open"]:setSubtitle(toJson({{text = "All Flags removed!", bold = true, color = golfGUIColor}})):setPos(player:getPos()):play():setVolume(0.7):setPitch(1.2) 
-            end
-        return nil end
-
-        if string.sub(command, 1, 4) == ("help") then
-            if host:isHost() then
-                host:setChatMessage(1, toJson({{text = golf.GUIHeader .. "\n\n\n", bold = true, color = golfGUIColor}, {text = "Available Commands\n\n", color = "white"}, {text = "  /golf help  ->  Returns all commands\n  /golf reset  ->  Resets the game, does NOT reset your flags\n  /golf remove  ->  Removes ALL of your flags\n  /golf tp  ->  Teleports you to your golfball", color = "white", bold = false, italic = true}}), vec(1, 0, 0))
-            end
-        return nil end
-        
 
         host:actionbar(toJson({{text = "Command not recognized!", bold = true, color = golfGUIColor}})) 
     end
