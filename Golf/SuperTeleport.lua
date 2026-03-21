@@ -5,23 +5,23 @@
        |  |   |  ___/   |      __ <    |    |      |      |      ___/   |   |  __ <    |   
  _____/  \___/  _|     _____| _| \_\  _|   _____| _____| _____| _|     \___/  _| \_\  _|   
                                                                                            
-    ver. 0.1.0                             
+    ver. 0.2.1                             
     Made by @jeungbeen
 
 ]]--
 
 
---region "Config"
+--#region "Config"
 local warpSound = "item.firecharge.use"
 local warpParticle = "poof"
 
---end
+--#endregion
+
 
 --#region "Implementation"
 function pings.superTeleport(destination)
     if not player:isLoaded() then return end
     local interval = 0
-    --destination = vec(math.floor(destination.x), math.floor(destination.y), math.floor(destination.z))
 
     teleportSequence = function()
         if interval <= 2 then
@@ -79,11 +79,4 @@ function pings.superTeleport(destination)
 
 end
 
-function summon(sender)
-    if world.getPlayers()[sender] and world.getPlayers()[sender]:isLoaded() then
-        pings.superTeleport(world.getPlayers()[sender]:getPos())
-        host:actionbar(sender .. " teleported you to " .. sender)
-        host:sendChatCommand("w " .. sender .. " Teleported Jeungbeen to you!")
-    end
-end
 --#endregion

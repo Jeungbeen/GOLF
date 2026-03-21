@@ -138,8 +138,7 @@ local indicatorElement = models:newPart("Indicator", "HUD")
 
 local indicatorText = indicatorElement:newText("Indicator")
         :setText(toJson({text = indicatorText, color = "white"}))
-        :setOutline(indicatorTextOutline)
-        :setOutlineColor(vectors.hexToRGB(indicatorTextOutlineColor))
+        :setShadow(true)
         :setAlignment("CENTER")
         :setPos(-client:getWindowSize().x / 6, -client:getWindowSize().y / 30, 0)
         :setLight(15, 15)
@@ -569,7 +568,7 @@ function events.tick()
             if golf.mode == 1 then
                 ball.origin.angle = player:getLookDir()
                 ball.origin.direction = (ball.origin.angle.x_z):normalize()
-                ball.origin.pos = golf.firstShot and player:getPos() + ball.origin.direction or landPos
+                ball.origin.pos = golf.firstShot and player:getPos() + ball.origin.direction + vec(0, 0.25, 0) or landPos
                 
                 m, c = math.tan(math.rad((ball.origin.angle.y * 90))), ball.origin.pos.y
 
@@ -589,7 +588,7 @@ function events.tick()
             pings.syncBallOriginPos(ball.origin.pos, m, c)
             pings.syncLandDistance(landDistance)
 
-            sounds[hitSound]:setSubtitle(player:getName() .. " takes a shot"):setPos(player:getPos()):setVolume(0.5):setPitch(1.3):play()
+            sounds[hitSound]:setSubtitle(player:getName() .. " takes a shot"):setPos(player:getPos()):setVolume(0.5):setPitch(math.clamp(0.1 * (ball.launchSpeed.clamp[2] - ball.launchSpeed.value), 0.5, 1.7)):play()
             host:swingArm()
 
             golf.firstShot = false

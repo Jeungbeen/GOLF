@@ -1,5 +1,3 @@
-if avatar:getPermissionLevel() == "MAX" or avatar:getPermissionLevel() == "HIGH" then
-
 -- ┌───┐                ┌───┐ --
 -- │ ┌─┘ ┌─────┐┌─────┐ └─┐ │ --
 -- │ │   │ ┌───┘│ ╶───┤   │ │ --
@@ -2271,5 +2269,3 @@ local AnimationAPI
 ---@param ignore_blending? boolean
 ---@return Animation[]
 function AnimationAPI:getPlaying(hold, ignore_blending) end
-
-end

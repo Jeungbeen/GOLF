@@ -3,8 +3,8 @@ vanilla_model.PLAYER:setVisible(false)
 local jl = require("libraries/JustLean")
 local torso = jl.lean:new(
     models.model.root.Torso,      --ModelPart, change this accordingly
-    { x = -45, y = -45 },         -- minimum Lean, can be either a table or Vector2. Change to suit your needs
-    { x = 25, y = 45 },           -- maximum Lean, can be either a table or Vector2. Change to suit your needs.
+    { x = -20, y = -20 },         -- minimum Lean, can be either a table or Vector2. Change to suit your needs
+    { x = 15, y = 20 },           -- maximum Lean, can be either a table or Vector2. Change to suit your needs.
     0.3,                          --speed,
     "inOutSine",               --interpolation method. Takes string, Valid vals: "linear", "inOutSine", "inOutCubic"
     true,                         --optional breathing idle
@@ -46,7 +46,7 @@ local left_arm = jl.influence:new(
     0.5,
     "linear",
     "ARM_LEFT",
-    {-0.7,0,0},
+    {0.7,0,0},
     torso,
     true
 )
@@ -56,7 +56,7 @@ local right_arm = jl.influence:new(
     0.5,
     "linear",
     "ARM_RIGHT",
-    {-0.7,0,0},
+    {0.7,0,0},
     torso,
     true
 )
