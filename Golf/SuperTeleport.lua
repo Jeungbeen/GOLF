@@ -34,6 +34,8 @@ function pings.superTeleport(destination)
                         :spawn()
                 end
                 
+                sounds[warpSound]:setSubtitle(player:getName() .. " teleports"):setPos(player:getPos()):play():setVolume(0.3):setPitch(1.5)
+
                 if silly then
                     silly:setVel(vec(0, 0, 0))
                     silly:setPos(vec(player:getPos().x, 384, player:getPos().z))
@@ -56,7 +58,7 @@ function pings.superTeleport(destination)
                     silly:setVel(vec(0, 0, 0))
                 end
 
-                sounds[warpSound]:setSubtitle("Teleporter used"):setPos(player:getPos()):play():setVolume(0.3):setPitch(1.5)
+                sounds[warpSound]:setSubtitle(player:getName() .. " teleports"):setPos(player:getPos()):play():setVolume(0.3):setPitch(1.5)
 
                 for _ = 1, 7 do
                     local dir = math.random() * math.pi * 2
