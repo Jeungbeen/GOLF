@@ -159,6 +159,7 @@ end
 ---@param a number Launch speed, determines the size of the parabola
 ---@return number  Distance between two points on the parabola
 local function ballFlightPathCalculation(m, a) 
+    if m < 0 then return nil end
 
     return 2 * (a / math.sqrt(m))
 end
@@ -169,7 +170,8 @@ end
 ---@param c number Shift in y direction of the parabola
 ---@return number  y of the parabola on position x
 local function ballFlightPositionCalculation(x, m, a, c)
-
+    if m < 0 then return nil end
+    
     return (-m/a) * ((x-(a/(math.sqrt(m))))^2) + a + c
 end
 
@@ -291,7 +293,7 @@ local function showFlags(removeFlags)
                 :setRot(vec(0, -i[3].y - 180, 0))
                 :setPos(vec(vectors.angleToDir(-i[3] - 180).x * -9 + vectors.angleToDir(-i[3] - 180).z * 7, 35, vectors.angleToDir(-i[3] - 180).z * 9 + vectors.angleToDir(-i[3] - 180).x * 7))  
                 :setScale(0.4, 0.4, 0.4)
-                :setLight(15, 15)
+                :setLight(10, 10)
 
         table.insert(flags.activeFlags, flag)
         table.insert(flags.activeFlags, flagDisplay)
@@ -341,10 +343,14 @@ end
 ---@param currentPos Vector3
 ---@param _m number
 ---@param _c number
-function pings.syncBallOriginPos(currentPos, _m, _c)
+function pings.syncBallOriginPos(currentPos, _m, _c, clamp, speed)
     ball.origin.pos = currentPos
     m = _m
     c = _c
+    ball.launchSpeed.clamp = clamp
+    ball.launchSpeed.value = speed
+
+    sounds[hitSound]:setSubtitle(player:getName() .. " takes a shot"):setPos(player:getPos()):setVolume(0.5):setPitch(math.clamp(0.1 * (ball.launchSpeed.clamp[2] - ball.launchSpeed.value), 0.5, 1.7)):play()
 end
 
 --Pings current land position
@@ -572,7 +578,9 @@ function events.tick()
                 
                 m, c = math.tan(math.rad((ball.origin.angle.y * 90))), ball.origin.pos.y
 
-                landDistance = ballFlightPathCalculation(m, ball.launchSpeed.value, ball.origin.pos.y)
+                if ballFlightPathCalculation(m, ball.launchSpeed.value) == nil then return end
+                
+                landDistance = ballFlightPathCalculation(m, ball.launchSpeed.value)
 
             elseif golf.mode == 2 then
                 ball.origin.angle = (player:getLookDir().x_z):normalize()
@@ -585,10 +593,9 @@ function events.tick()
             end
             
             pings.syncBallPos(ball.origin.pos)
-            pings.syncBallOriginPos(ball.origin.pos, m, c)
+            pings.syncBallOriginPos(ball.origin.pos, m, c, ball.launchSpeed.clamp, ball.launchSpeed.value)
             pings.syncLandDistance(landDistance)
 
-            sounds[hitSound]:setSubtitle(player:getName() .. " takes a shot"):setPos(player:getPos()):setVolume(0.5):setPitch(math.clamp(0.1 * (ball.launchSpeed.clamp[2] - ball.launchSpeed.value), 0.5, 1.7)):play()
             host:swingArm()
 
             golf.firstShot = false
@@ -615,6 +622,8 @@ function events.tick()
 
 
             indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Power\n", color = "white"}, {text = tostring(ball.launchSpeed.value), color = golfGUIColor}, {text = "\nDistance\n", color = "white"}, {text = tostring(math.floor(distanceCalculation(ball.origin.pos, ball.currentPos) * 100) / 100)}, {text = "m"}}))
+            
+            if ballFlightPositionCalculation(step, m, ball.launchSpeed.value, c) == nil then return end
 
             if golf.mode == 1 then
                 ball.currentPos = vec(ball.origin.pos.x + ball.origin.direction.x * step, ballFlightPositionCalculation(step, m, ball.launchSpeed.value, c), ball.origin.pos.z + ball.origin.direction.z * step)
