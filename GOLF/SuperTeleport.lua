@@ -35,6 +35,7 @@ function pings.superTeleport(destination)
                 end
                 
                 if silly then
+                    silly:setVel(vec(0, 0, 0))
                     silly:setPos(vec(player:getPos().x, 384, player:getPos().z))
                     silly:setVel(vec(0, 0, 0))
                 end
@@ -42,6 +43,7 @@ function pings.superTeleport(destination)
 
             if interval == 1 and player:isLoaded() then
                 if silly then
+                    silly:setVel(vec(0, 0, 0))
                     silly:setPos(vec(destination.x, 384, destination.z))
                     silly:setVel(vec(0, 0, 0))
                 end
@@ -51,6 +53,7 @@ function pings.superTeleport(destination)
                 if silly then
                     silly:setVel(vec(0, 0, 0))
                     silly:setPos(vec(player:getPos().x, destination.y, player:getPos().z))
+                    silly:setVel(vec(0, 0, 0))
                 end
 
                 sounds[warpSound]:setSubtitle("Teleporter used"):setPos(player:getPos()):play():setVolume(0.3):setPitch(1.5)
