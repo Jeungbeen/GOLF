@@ -710,7 +710,7 @@ function events.chat_send_message(msg)
         
         if string.sub(command, 1, 4) == ("help") then
             if host:isHost() then
-                host:setChatMessage(1, toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = "Keybinds\n\n", color = "white"}, {text = "  [ALT] + [LClick]  ->  Swings golf club/places flag\n  [ALT] + [RClick]  ->  Toggles guidelines", color = "white", bold = false, italic = true}, {text = "\n\nAvailable Commands\n\n", color = "white"}, {text = "  /golf help  ->  Returns all commands\n  /golf reset  ->  Resets the game, does NOT reset your flags\n  /golf remove  ->  Removes ALL of your flags\n  /golf tp  ->  Teleports you to your golfball", color = "white", bold = false, italic = true}}), vec(1, 0, 0))
+                host:setChatMessage(1, toJson({{text = "\n" .. golf.GUIHeader .. "\n\n\n", bold = true, color = golfGUIColor}, {text = "Items needed\n\n", color = "white"}, {text = "  'Driver' / 'Hybrid' / 'Wedge'  ->  Long range shots\n  *Must look above 0 Degrees to use!\n\n  'Putter'  ->  Close range straight shots\n  'Flag'  ->  Use to place down flags/holes\n\n", color = "white", bold = false, italic = true}, {text = "Keybinds\n\n", color = "white"}, {text = "  [ALT] + [LClick]  ->  Swings golf club/places flag\n  [ALT] + [RClick]  ->  Toggles guidelines\n\n", color = "white", bold = false, italic = true}, {text = "Available Commands\n\n", color = "white"}, {text = "  /golf help  ->  Returns all commands\n  /golf reset  ->  Resets the game, does NOT reset your flags\n  /golf remove  ->  Removes ALL of your flags\n  /golf tp  ->  Teleports you to your golfball", color = "white", bold = false, italic = true}}), vec(1, 0, 0))
             end
         return nil end
 
