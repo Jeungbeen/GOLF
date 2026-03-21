@@ -11,13 +11,14 @@
 
 
 --#region "Config"
-local ballParticle = "end_rod"    --Particle used to render the "ball"
+local ballParticle = "end_rod"                 --Particle used to render the "ball"
 local trajectoryParticle = "electric_spark"    --Particle used to render the guideline
-local hitSound = "entity.player.attack.sweep"    --Sound playing when hitting the ball
-local ballLandSound = "block.stone.hit"    --Sound playing when ball lands
+local hitSound = "entity.player.attack.sweep"  --Sound playing when hitting the ball
+local ballLandSound = "block.stone.hit"        --Sound playing when ball lands
 
-local golfGUITitle = "GOLF by Jeungbeen"    --Header of the GUI, can be customized
-local golfGUIColor = "#8CDB90"    --Color of the GUI
+local golfGUITitle = "GOLF by Jeungbeen"       --Header of the GUI, can be customized
+local golfGUIColor = "#8CDB90"               --Color of the GUI
+
 
 
 --Yet be implemented
@@ -41,6 +42,7 @@ local FOXCamera = CameraAPI
 ---@field firstShot boolean         First shot determines if the ball will be rendered in the world
 ---@field toggleTrajectory boolean 
 ---@field shotCount number
+---@field inTheHole boolean
 ---@field GUIHeader string          Header of the GOLF GUI
 ---@type Golf
 local golf = {}
@@ -49,8 +51,8 @@ golf.mode = 1
 golf.firstShot = true
 golf.toggleTrajectory = false
 golf.shotCount = 0
+golf.inTheHole = false
 golf.GUIHeader = golfGUITitle
-
 
 
 
@@ -84,6 +86,7 @@ ball.launchSpeed.clamp = {1, 30}
 ball.currentPos = vec(0, 0, 0)
 ball.currentGround = 0
 ball.launched = false
+
 
 
 --How far away the precalculated landing spot is through f(x) function's zero points 
@@ -148,6 +151,7 @@ local indicatorText = indicatorElement:newText("Indicator")
         :setLight(15, 15)
 
         
+
 --Calculates the distance between two points with a straight line   
 ---@param a Vector3
 ---@param b Vector3
@@ -160,24 +164,20 @@ end
 --Calculates the distance between two points via a parabola
 ---@param m number Slope of the parabola
 ---@param a number Launch speed, determines the size of the parabola
----@return number
-local function ballFlightPathCalculation(m, a)
-    local result = 0
-    
-    result = 2 * (a / math.sqrt(m))
-    return result
+---@return number  Distance between two points on the parabola
+local function ballFlightPathCalculation(m, a) 
+
+    return 2 * (a / math.sqrt(m))
 end
 
 --Calculates the y of a parabola with the given x
 ---@param m number Slope of the parabola
 ---@param a number Launch speed, determines the size of the parabola
 ---@param c number Shift in y direction of the parabola
----@return number
+---@return number  y of the parabola on position x
 local function ballFlightPositionCalculation(x, m, a, c)
-    local result = 0
 
-    result = (-m/a) * ((x-(a/(math.sqrt(m))))^2) + a
-    return result + c
+    return (-m/a) * ((x-(a/(math.sqrt(m))))^2) + a + c
 end
 
 
@@ -186,27 +186,26 @@ end
 ---@param origin Vector3 The origin of the ball to start the calculation at
 local function showBallTrajectory(origin)
     if host:isHost() then
+        --Needs its own trajectory properties as to not interfere with the main ball properties
+        local currentOriginPos = origin
+        local currentOriginDirection = (player:getLookDir().x_z):normalize()
+
         if golf.mode == 1 then
             local currentLandDistance = ballFlightPathCalculation(math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y)            
-            local currentOriginDirection = (player:getLookDir().x_z):normalize()
-            local currentOriginPos = origin
 
             for i = 0, currentLandDistance, currentLandDistance / (ball.launchSpeed.value * 3) do
                 local trajectoryPos = vec(currentOriginPos.x + currentOriginDirection.x * i, ballFlightPositionCalculation(i, math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y), currentOriginPos.z + currentOriginDirection.z * i)
 
                 particles:newParticle(trajectoryParticle, trajectoryPos)
             end
+
         elseif golf.mode == 2 then
-            local currentOriginDirection = (player:getLookDir().x_z):normalize()
-            local currentOriginPos = origin
             local currentLandDistance = distanceCalculation(currentOriginPos, currentOriginPos + currentOriginDirection * (ball.launchSpeed.value / 2))            
             
             for i = 0, currentLandDistance, currentLandDistance / ((ball.launchSpeed.value / 2) * 3) do
                 local trajectoryPos = vec(currentOriginPos.x + currentOriginDirection.x * i, currentOriginPos.y + currentOriginDirection.y * i, currentOriginPos.z + currentOriginDirection.z * i)
 
-                if golf.firstShot then
-                    trajectoryPos = trajectoryPos + vec(0, 0.25, 0)
-                end
+                trajectoryPos = golf.firstShot and trajectoryPos + vec(0, 0.25, 0) or trajectoryPos
 
                 particles:newParticle(trajectoryParticle, trajectoryPos)
             end
@@ -218,6 +217,7 @@ end
 
 --Checks if the ball is on the ground
 ---@param currentPos Vector3
+---@return boolean
 local function checkBallGrounded(currentPos)
     local block, hitPos, side = raycast:block(currentPos, vec(currentPos.x, -53, currentPos.z))
     ball.currentGround = block:getPos().y
@@ -227,12 +227,23 @@ end
 
 --Checks if the ball hits an obstacle
 ---@param currentPos Vector3
+---@return boolean
 local function checkBallObstacle(currentPos, direction)
     local block, hitPos, side = raycast:block(currentPos + vec(0, 0.25, 0), currentPos + vec(0, 0.25, 0) + direction * 5)
 
     if block == nil then return false end
 
     return distanceCalculation(currentPos, block:getPos()) < 1.5
+end
+
+--Checks if the ball hits a wall and grounds it
+---@param currentPos Vector3
+---@param direction Vector3
+local function checkBallHitWall(currentPos, direction)
+    if checkBallObstacle(currentPos, direction) then
+        local block, hitPos, side = raycast:block(currentPos, vec(currentPos.x, -53, currentPos.z))
+        ball.currentPos.y = block:getPos().y
+    end
 end
 
 --Checks if the ball hits a flag
@@ -256,7 +267,6 @@ local function checkBallFlag(currentPos)
         pings.syncBallPos(ball.currentPos)
         landPos = vec(ball.currentPos.x, math.floor(ball.currentPos.y + 1) - 0.5, ball.currentPos.z)
 
-        golf.sequence = 4
         pings.syncSequence(4)
     end
 end
@@ -272,9 +282,7 @@ local function showFlags(removeFlags)
 
     for _, i in ipairs(flags.globalFlags) do 
         local flag = models:newPart("Flag", "World")
-
-        flag:setPos((i[2] + vec(0, 0.1, 0)) * 16)
-
+                :setPos((i[2] + vec(0, 0.1, 0)) * 16)
 
         local flagDisplay = flag:newBlock("FlagDisplay")
                 :setBlock("red_banner")
@@ -301,8 +309,8 @@ end
 --Resets the entire golf sequence
 ---@param hardReset boolean Set true to reset every state to the beginning
 function pings.resetSequence(hardReset) 
-    ball.launched = false
     step = 0
+    ball.launched = false
     golf.sequence = hardReset and 0 or 1
 
     indicatorText:setText("")
@@ -320,6 +328,10 @@ end
 ---@param rot Vector3 Rotation of this flag, formatted like player:getRot()
 function pings.addToPersonalFlags(str, pos, rot)
     table.insert(flags.personalFlags, {str, pos, rot})
+
+    if not player:isLoaded() then return end
+
+    sounds["block.iron_trapdoor.close"]:setSubtitle(player:getName() .. " sets a flag"):setPos(pos):play():setVolume(0.7):setPitch(1.2)
 end
 
 --Pings current ball position
@@ -362,27 +374,33 @@ function events.mouse_press(btn, ctx, mod)
     if mod ~= 4 then return end
     if ctx ~= 1 then return end
 
+    --Limit sequence change when not holding a golf club or when ball is in the air, only allow it when not placing flags
     if not (golf.mode == 0 or golf.sequence == 3) and flags.place.sequence == 0 then
         if btn == 0 then 
             if player:isLoaded() and not (math.tan(math.rad((player:getLookDir().y * 90))) <= 0 and golf.sequence == 1 and golf.mode == 1) and golf.sequence ~= 2 then
                 golf.sequence = golf.sequence + 1 
                 pings.syncSequence(golf.sequence)
+
                 if golf.sequence == 1 and host:isHost() then
-                    showFlags(false) 
                     sounds["block.note_block.harp"]:setSubtitle(toJson({{text = "GOLF initialized", bold = true, color = golfGUIColor}})):setPos(player:getPos()):play():setVolume(0.7):setPitch(1.2) 
                 end
             end
-        elseif btn == 1 and golf.sequence ~= 0 then 
+        elseif btn == 1 and golf.sequence ~= 0 then    --Only allow toggling guidelines when golfing
             golf.toggleTrajectory = not golf.toggleTrajectory 
+
             if host:isHost() and player:isLoaded() then
                 sounds["block.stone_button.click_on"]:setSubtitle(toJson({{text = "Guidelines ", bold = true, color = golfGUIColor}, {text = golf.toggleTrajectory and "enabled" or "disabled"}})):setPos(player:getPos()):play():setVolume(0.5):setPitch(1) 
             end
         end
     end
 
+    --Only allow flag sequence change when holding a flag and not golfing
     if (flags.place.sequence == 1 or flags.place.sequence == 2) and golf.sequence == 0 and btn == 0 then
+        --Cycle through 1 and 2
         flags.place.sequence = flags.place.sequence < 2 and flags.place.sequence + 1 or 1
+
         pings.syncFlagSequence(flags.place.sequence)
+
         if flags.place.sequence == 2 then
             if host:isHost() then
                 sounds["block.note_block.harp"]:setSubtitle(toJson({{text = "Position set!", bold = true, color = golfGUIColor}})):setPos(player:getPos()):play():setVolume(0.7):setPitch(1.8) 
@@ -412,21 +430,25 @@ end
 
 --Main logic system
 function events.tick()
-    if not player:isLoaded() then return end
-    
-    if flags.place.sequence ~= 0 or golf.sequence ~= 0 then
-        
-
-        if #flags.globalFlags ~= flags.globalFlagCount then
-            flags.globalFlagCount = #flags.globalFlags
-            showFlags(false) 
-        end
+    indicatorText:setPos(-client:getWindowSize().x / 6, -client:getWindowSize().y / 30, 0)
+    if flags.place.sequence == 0 and golf.sequence == 0 then
+        indicatorText:setText("")
     end
 
 
-    indicatorText:setPos(-client:getWindowSize().x / 6, -client:getWindowSize().y / 30, 0)
+    if not player:isLoaded() then return end
+    
+    --Sync and render new flags
+    if #flags.globalFlags ~= flags.globalFlagCount then
+        flags.globalFlagCount = #flags.globalFlags
+        showFlags(false) 
+    end
 
 
+    --Sync your flags to all clients
+    avatar:store("GOLF", flags.personalFlags)
+
+    --Get flags of all clients
     for k, v in pairs(flags.globalFlags) do flags.globalFlags[k] = nil end
     for k, v in pairs(world.avatarVars()) do
         if v["GOLF"] then
@@ -436,48 +458,37 @@ function events.tick()
         end
     end
 
-    avatar:store("GOLF", flags.personalFlags)
 
-    if flags.place.sequence == 0 and golf.sequence == 0 then
-        indicatorText:setText("")
-        
-    end
-
+    --Checks if you are holding a golf related item
     if flags.place.sequence == 0 or flags.place.sequence == 1 then
         flags.place.sequence = not ((player:getHeldItem(false):getName() == "Driver" or player:getHeldItem(false):getName() == "Hybrid" or player:getHeldItem(false):getName() == "Wedge") or player:getHeldItem(false):getName() == "Putter") and player:getHeldItem(false):getName() == "Flag" and 1 or 0
-
     end
 
     if golf.sequence == 0 or golf.sequence == 1 then
         golf.mode = (player:getHeldItem(false):getName() == "Driver" or player:getHeldItem(false):getName() == "Hybrid" or player:getHeldItem(false):getName() == "Wedge") and 1 or player:getHeldItem(false):getName() == "Putter" and 2 or 0
-
     end
     
-
 
     if flags.place.sequence == 1 then
         flags.place.potentialFlagPos = player:getPos()
         flags.place.potentialFlagRot = player:getRot()
-        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, color = "white"}, {text = "Place flag at\n", color = "white"}, {text = string.gsub(tostring(vec(math.floor(flags.place.potentialFlagPos.x * 100) / 100, math.floor(flags.place.potentialFlagPos.y * 100) / 100, math.floor(flags.place.potentialFlagPos.z * 100) / 100)), "[{}]", "")}}))
-       
-    end
 
-    if flags.place.sequence == 2 then
-        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, color = "white"}, {text = "Type /golf 'Your flag name' to add this flag's name\n\n[ALT] + [LClick] to cancel", color = "white"}}))
+        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Place flag at\n", color = "white"}, {text = string.gsub(tostring(vec(math.floor(flags.place.potentialFlagPos.x * 100) / 100, math.floor(flags.place.potentialFlagPos.y * 100) / 100, math.floor(flags.place.potentialFlagPos.z * 100) / 100)), "[{}]", "")}}))
+    
+    elseif flags.place.sequence == 2 then
+        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Type /golf 'Your flag name' to add this flag's name\n\n[ALT] + [LClick] to cancel", color = "white"}}))
      
         if host:isHost() then
             particles:newParticle("firework", vec(flags.place.potentialFlagPos.x + (math.random() - 0.5) * 0.5, flags.place.potentialFlagPos.y + 1 + math.random() - 0.5, flags.place.potentialFlagPos.z + (math.random() - 0.5) * 0.5))
         end
     end
 
+
     if golf.sequence == 1 then
-        if golf.mode == 1 then
-            ball.launchSpeed.clamp = {1, 30}
-        elseif golf.mode == 2 then
-            ball.launchSpeed.clamp = {1, 10}
-        end
-        
         ball.launched = false
+
+        ball.launchSpeed.clamp = golf.mode == 1 and {1, 30} or golf.mode == 2 and {1, 10} or {1, 1}
+
         if ball.launchSpeed.climb and ball.launchSpeed.value < ball.launchSpeed.clamp[2] then
             ball.launchSpeed.value = ball.launchSpeed.value + 1
         elseif ball.launchSpeed.climb then
@@ -490,48 +501,48 @@ function events.tick()
             ball.launchSpeed.climb = true
         end
 
+        --Render ball when not first shot
         if not golf.firstShot then
             particles:newParticle(ballParticle, landPos)
         end
 
+        --Render guidelines
         if golf.toggleTrajectory and showBallTrajectoryInterval == 0 and golf.firstShot and player:isLoaded() then
             if golf.mode == 1 then
                 showBallTrajectory(player:getPos() + (player:getLookDir()):normalize())
             elseif golf.mode == 2 then
                 showBallTrajectory(player:getPos() + (player:getLookDir().x_z):normalize())
             end
-            
+
         elseif golf.toggleTrajectory and showBallTrajectoryInterval == 0 and player:isLoaded() then
             showBallTrajectory(landPos)
         end
 
         showBallTrajectoryInterval = showBallTrajectoryInterval < 2 and showBallTrajectoryInterval + 1 or 0
 
+
+        --String for the power indicator bar
         local powerIndicator = ""
 
         for i = 1, ball.launchSpeed.clamp[2] do
-            if i > ball.launchSpeed.value then
-                powerIndicator = powerIndicator .. "□"
-            else
-                powerIndicator = powerIndicator .. "■"
-            end
+            powerIndicator = i > ball.launchSpeed.value and powerIndicator .. "□" or powerIndicator .. "■"
         end
         
+        --Not display GUI when 
         if golf.mode ~= 0 then
-            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, color = "white"}, {text = "Power\n", color = "white"}, {text = powerIndicator, color = golfGUIColor}, {text = golf.firstShot and "\n\n[ALT] + [LClick] to swing\n[ALT] + [RClick] to toggle Guidelines\n\n/golf help for all commands" or "", color = "white"}}))
+            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Power\n", color = "white"}, {text = powerIndicator, color = golfGUIColor}, {text = golf.firstShot and "\n\n[ALT] + [LClick] to swing\n[ALT] + [RClick] to toggle Guidelines\n\n/golf help for all commands" or "", color = "white"}}))
         else
-            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, color = "white"}, {text = player:getHeldItem(false):getName() ~= "Flag" and "Golf club not equipped!\n" or "Cannot place flags during a game!\n", color = "white"}}))
+            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = player:getHeldItem(false):getName() ~= "Flag" and "Golf club not equipped!\n" or "Cannot place flags during a game!\n", color = "white"}}))
         end
     end
 
     if golf.sequence == 2 then
-        if not ball.launched and player:isLoaded() then
+        if not ball.launched and player:isLoaded() then    --On initialization of sequence 2
             ball.launched = true     
             step = 0
             golf.shotCount = golf.shotCount + 1
             
             if golf.mode == 1 then
-
                 ball.origin.angle = player:getLookDir()
                 ball.origin.direction = (ball.origin.angle.x_z):normalize()
                 ball.origin.pos = golf.firstShot and player:getPos() + ball.origin.direction or landPos
@@ -541,7 +552,6 @@ function events.tick()
                 landDistance = ballFlightPathCalculation(m, ball.launchSpeed.value, ball.origin.pos.y)
 
             elseif golf.mode == 2 then
-
                 ball.origin.angle = (player:getLookDir().x_z):normalize()
                 ball.origin.direction = ball.origin.angle
                 ball.origin.pos = golf.firstShot and player:getPos() + ball.origin.direction or landPos + ball.origin.direction 
@@ -550,18 +560,20 @@ function events.tick()
 
                 landDistance = distanceCalculation(ball.origin.pos, ball.origin.pos + ball.origin.direction * ball.launchSpeed.value)
             end
+
             sounds[hitSound]:setSubtitle(player:getName() .. " takes a shot"):setPos(player:getPos()):play():setVolume(0.5):setPitch(1.3)
             host:swingArm()
 
             golf.firstShot = false
         elseif player:isLoaded() then
             checkBallFlag(ball.currentPos)
+            checkBallHitWall(ball.currentPos, ball.origin.direction)    --Unreliable! fix asap
 
-            if (golf.mode == 1 and checkBallGrounded(ball.currentPos)) or (golf.mode == 2 and step == landDistance or checkBallObstacle(ball.currentPos, ball.origin.direction)) then 
+            --Check for ball land events
+            if (golf.mode == 1 and (checkBallGrounded(ball.currentPos) or checkBallObstacle(ball.currentPos, ball.origin.direction))) or (golf.mode == 2 and step == landDistance or checkBallObstacle(ball.currentPos, ball.origin.direction)) then 
                 golf.sequence = 3 
-                if golf.mode == 1 then
-                    ball.currentPos.y = ball.currentPos.y + 1.25
-                end
+
+                ball.currentPos.y = golf.mode == 1 and ball.currentPos.y + 1.25 or ball.currentPos.y
 
                 landPos = vec(ball.currentPos.x, math.floor(ball.currentPos.y + 1) - 0.5, ball.currentPos.z)
 
@@ -572,30 +584,33 @@ function events.tick()
                 sounds[ballLandSound]:setSubtitle(player:getName() .. "'s golfball lands"):setPos(ball.currentPos):play():setVolume(0.7):setPitch(0.7)
             return end
 
-            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, color = "white"}, {text = "Speed\n", color = "white"}, {text = tostring(ball.launchSpeed.value), color = golfGUIColor}, {text = "\nDistance\n", color = "white"}, {text = tostring(math.floor(distanceCalculation(ball.origin.pos, ball.currentPos) * 100) / 100)}, {text = "m"}}))
+
+            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Speed\n", color = "white"}, {text = tostring(ball.launchSpeed.value), color = golfGUIColor}, {text = "\nDistance\n", color = "white"}, {text = tostring(math.floor(distanceCalculation(ball.origin.pos, ball.currentPos) * 100) / 100)}, {text = "m"}}))
 
             if golf.mode == 1 then
                 ball.currentPos = vec(ball.origin.pos.x + ball.origin.direction.x * step, ballFlightPositionCalculation(step, m, ball.launchSpeed.value, c), ball.origin.pos.z + ball.origin.direction.z * step)
             elseif golf.mode == 2 then
-                ball.currentPos = vec(ball.origin.pos.x + ball.origin.direction.x * step, ball.origin.pos.y + ball.origin.direction.y * step, ball.origin.pos.z + ball.origin.direction.z * step)                
-                if not checkBallGrounded(ball.currentPos) then
-                    ball.currentPos.y = ball.currentGround + 1.25
-                end
+                ball.currentPos = vec(ball.origin.pos.x + ball.origin.direction.x * step, ball.origin.pos.y + ball.origin.direction.y * step, ball.origin.pos.z + ball.origin.direction.z * step)  
+                
+                ball.currentPos.y = not checkBallGrounded(ball.currentPos) and ball.currentGround + 1.25 or ball.currentPos.y
             end
             
+
             step = ((golf.mode == 1 and not checkBallGrounded(ball.currentPos)) or (golf.mode == 2 and step < landDistance)) and step + landDistance / (ball.launchSpeed.value * 4) or landDistance
             
             particles:newParticle(ballParticle, ball.currentPos)
-
         end      
     end
 
     if golf.sequence == 3 then
-        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, color = "white"}, {text = "Go to your golfball to proceed!\n", color = "white"}, {text = string.gsub(tostring(vec(math.floor(landPos.x * 100) / 100, math.floor(landPos.y * 100) / 100, math.floor(landPos.z * 100) / 100)), "[{}]", "")}}))
+        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Go to your golfball to proceed!\n", color = "white"}, {text = string.gsub(tostring(vec(math.floor(landPos.x * 100) / 100, math.floor(landPos.y * 100) / 100, math.floor(landPos.z * 100) / 100)), "[{}]", "")}}))
         particles:newParticle(ballParticle, landPos)
         
+        --Wait for player to go near the ball
         if player:isLoaded() and distanceCalculation(player:getPos(), landPos) < 4 then
+            --Soft reset, only puts sequence to 1 and keeps the ball's current position
             pings.resetSequence(false)
+
             if host:isHost() then
                 sounds["block.note_block.harp"]:setSubtitle(toJson({{text = "You arrived at your golfball!", bold = true, color = golfGUIColor}})):setPos(player:getPos()):play():setVolume(0.7):setPitch(0.8) 
             end
@@ -603,10 +618,9 @@ function events.tick()
     end
 
     if golf.sequence == 4 then
-        indicatorText:setText(toJson({{text = golfGUITitle .. "\n\n", bold = true, color = golfGUIColor}, {text = "In the hole!\n\n", color = "white"}, {text = golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken in total" or tostring(golf.shotCount) .. " shots taken in total", bold = true, color = "white"}, {text = "\n\n[ALT] + [LClick] to reset", color = "white"}}))
-        
-        if not golf.inTheHole and player:isLoaded() then
+        if not golf.inTheHole and player:isLoaded() then    --On initialization of sequence 4
             golf.inTheHole = true
+            
             for _ = 1, 15 do
                 local dir = math.random() * math.pi * 2
                 particles["firework"]
@@ -620,9 +634,12 @@ function events.tick()
                 sounds["ui.toast.challenge_complete"]:setSubtitle(toJson({{text = "In the Hole!", bold = true, color = golfGUIColor}})):setPos(player:getPos()):play():setVolume(0.7):setPitch(1) 
             end
         end
+
+        indicatorText:setText(toJson({{text = golfGUITitle .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken in total" or tostring(golf.shotCount) .. " shots taken in total", bold = true, italic = true, color = golfGUIColor}, {text = "\n\nIn the hole!", color = "white"}, {text = "\n\n[ALT] + [LClick] to reset", bold = true, italic = false, color = "white"}}))
     end
 
     if golf.sequence == 5 then
+        --Hard reset, resets everything and puts the game to the initial state
         pings.resetSequence(true)
     end
 end
@@ -669,10 +686,6 @@ function events.chat_send_message(msg)
             pings.addToPersonalFlags(func, flags.place.potentialFlagPos, flags.place.potentialFlagRot)
 
             host:actionbar(toJson({{text = "Flag ", bold = true, color = golfGUIColor}, {text = func, color = "white"}, {text = " set!", color = golfGUIColor}})) 
-
-            if host:isHost() then
-                sounds["block.iron_trapdoor.close"]:setSubtitle(toJson({{text = "Flag set!", bold = true, color = golfGUIColor}})):setPos(player:getPos()):play():setVolume(0.7):setPitch(1.2) 
-            end
 
             flags.place.sequence = 1
             pings.syncFlagSequence(flags.place.sequence)
