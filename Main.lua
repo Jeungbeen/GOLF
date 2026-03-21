@@ -10,6 +10,7 @@
 
     GSAnimBlend by GrandpaScout at https://github.com/GrandpaScout/GSAnimBlend
     JustLean2 by XanderCreates at https://github.com/xandercreates/JustLean2
+    Skin by Lyriie at https://www.minecraftskins.net/springbouquet
     
 --]]
 
