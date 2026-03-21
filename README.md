@@ -1,6 +1,5 @@
 # GOLF by Jeungbeen
 
-*I will optimize the code in the following days
 
 # How to play:
 1. Get three different items each named "Driver" / "Hybrid" / "Wedge", "Putter" and "Flag"
