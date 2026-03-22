@@ -506,10 +506,10 @@ function events.tick()
         flags.place.potentialFlagPos = player:getPos()
         flags.place.potentialFlagRot = player:getRot()
 
-        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Place flag at\n", color = "white"}, {text = string.gsub(tostring(vec(math.floor(flags.place.potentialFlagPos.x * 100) / 100, math.floor(flags.place.potentialFlagPos.y * 100) / 100, math.floor(flags.place.potentialFlagPos.z * 100) / 100)), "[{}]", "")}}))
+        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = "Place flag at\n", color = "white"}, {text = string.gsub(tostring(vec(math.floor(flags.place.potentialFlagPos.x * 100) / 100, math.floor(flags.place.potentialFlagPos.y * 100) / 100, math.floor(flags.place.potentialFlagPos.z * 100) / 100)), "[{}]", "")}, {text = "\n\n[ALT] + [LClick] to place", color = "white"}}))
     
     elseif flags.place.sequence == 2 then
-        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Type /golf 'Your flag name' to add this flag's name\n\n[ALT] + [LClick] to cancel", color = "white"}}))
+        indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = "Type /golf 'Your flag name' to add this flag's name\n\n[ALT] + [LClick] to cancel", color = "white"}}))
      
         if host:isHost() then
             particles:newParticle("firework", vec(flags.place.potentialFlagPos.x + (math.random() - 0.5) * 0.5, flags.place.potentialFlagPos.y + 1 + math.random() - 0.5, flags.place.potentialFlagPos.z + (math.random() - 0.5) * 0.5))
