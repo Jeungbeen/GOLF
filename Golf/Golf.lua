@@ -186,9 +186,13 @@ local function showBallTrajectory(origin)
         local currentOriginDirection = (player:getLookDir().x_z):normalize()
 
         if golf.mode == 1 then
+            if ballFlightPathCalculation(math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y)  == nil then return end
+            
             local currentLandDistance = ballFlightPathCalculation(math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y)            
 
             for i = 0, currentLandDistance, currentLandDistance / (ball.launchSpeed.value * 3) do
+                if ballFlightPositionCalculation(i, math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y) == nil then return end
+                
                 local trajectoryPos = vec(currentOriginPos.x + currentOriginDirection.x * i, ballFlightPositionCalculation(i, math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y), currentOriginPos.z + currentOriginDirection.z * i)
 
                 particles:newParticle(trajectoryParticle, trajectoryPos)
