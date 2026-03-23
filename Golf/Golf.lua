@@ -11,13 +11,18 @@
 
 
 --#region "Config"
-local ballParticle = "end_rod"                 --Particle used to render the "ball"
-local trajectoryParticle = "electric_spark"    --Particle used to render the guideline
-local hitSound = "entity.player.attack.sweep"  --Sound playing when hitting the ball
-local ballLandSound = "block.stone.fall"        --Sound playing when ball lands
 
-local golfGUITitle = "GOLF by Jeungbeen"       --Header of the GUI, can be customized
-local golfGUIColor = "#8CDB90"               --Color of the GUI
+local ballParticle = "end_rod"                --Particle used to render the "ball"
+local trajectoryParticle = "electric_spark"   --Particle used to render the guideline
+local hitSound = "entity.player.attack.sweep" --Sound playing when hitting the ball
+local ballLandSound = "block.stone.fall"      --Sound playing when ball lands
+
+local golfGUITitle = "GOLF by Jeungbeen"      --Header of the GUI, can be customized
+local golfGUIColor = "#8CDB90"                --Color of the GUI
+
+local syncInterval = 10                       --Interval (in seconds) between pinging your flags with other clients to prevent desyncing
+
+local commandArgument = "golf"                --What goes after / to access golf commands, example: /golf
 
 --#endregion
 
@@ -29,7 +34,7 @@ local golfGUIColor = "#8CDB90"               --Color of the GUI
 ---@field y number
 ---@field z number
 
---GOLF System variables
+--Variables: System variables
 ---@class Golf
 ---@field sequence number           0 -> Not golfing  ~  4 -> In the hole
 ---@field mode number               0 -> No golf club, 1 -> Driver, 2 -> Putter
@@ -59,7 +64,7 @@ golf.GUIHeader = golfGUITitle
 ---@field climb boolean     True for increasing and false for decreasing the launch speed
 ---@field clamp number[]    Min/max launch speed
 
---Ball properties
+--Variables: Ball properties
 ---@class Ball
 ---@field origin BallOrigin
 ---@field launchSpeed LaunchSpeed
@@ -100,7 +105,7 @@ local showBallTrajectoryInterval = 0
 ---@field potentialFlagRot Vector3  Formatting in player:getRot()
 ---@field sequence number           0 -> Not placing flags, 1 -> Searching for position, 2 -> Position set and setting name
 
---Flag System properties
+--Variables: Flag System properties
 ---@class Flag
 ---@field globalFlags table         All flags in the world
 ---@field globalFlagCount number    Count of all flags in the world
@@ -123,7 +128,7 @@ flags.place.sequence = 0
 local wind = {}
 wind.direction, wind.intensity = vec(0, 0, 0), 0
 
-
+--Host only: Initialize GUI
 if host:isHost() then
     local indicatorText = ""
     local indicatorTextOutline, indicatorTextOutlineColor = false, ""
@@ -139,6 +144,8 @@ if host:isHost() then
 
 end   
 
+
+--#region "Functions"
 
 --Calculates the distance between two points with a straight line   
 ---@param a Vector3
@@ -169,7 +176,6 @@ local function ballFlightPositionCalculation(x, m, a, c)
     
     return (-m/a) * ((x-(a/(math.sqrt(m))))^2) + a + c
 end
-
 
 
 --Shows the trajectory of the ball with particles
@@ -206,7 +212,6 @@ local function showBallTrajectory(origin)
         end
     end
 end
-
 
 
 --Checks if the ball is on the ground
@@ -267,7 +272,6 @@ local function checkBallFlag(currentPos)
 end
 
 
-
 --Shows all flags in the world
 ---@param removeFlags boolean Set true to remove all active flags
 local function showFlags(removeFlags) 
@@ -298,7 +302,6 @@ local function showFlags(removeFlags)
         table.insert(flags.activeFlags, flagName)
     end
 end
-
 
 
 --Resets the entire golf sequence
@@ -396,6 +399,7 @@ function pings.syncFlagRemoval()
     end
 end
 
+--#endregion
 
 
 ---@param btn number 0 -> Left click, 1 -> Right click
@@ -443,12 +447,12 @@ function events.mouse_press(btn, ctx, mod)
 end    
 
 
-
---Sync flags every set interval
-local syncInterval = 200
-local syncIntervalSaved = syncInterval
+--Sync flags every set interval for all clients
+local syncIntervalSaved = syncInterval * 20
 
 function events.tick()
+    if not host:isHost() then return end
+
     if syncInterval > 0 then
             syncInterval = syncInterval - 1
         else
@@ -456,7 +460,6 @@ function events.tick()
             pings.syncFlags(flags.personalFlags)
     end
 end
-
 
 
 --Main logic system
@@ -562,7 +565,7 @@ function events.tick()
                 powerIndicator = i > ball.launchSpeed.value and powerIndicator .. "□" or powerIndicator .. "■"
             end
             
-            --Not display GUI when 
+            --Display GUI only when holding a golf club
             if golf.mode ~= 0 then
                 indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Power\n", color = "white"}, {text = powerIndicator, color = golfGUIColor}, {text = golf.firstShot and "\n\n[ALT] + [LClick] to swing\n[ALT] + [RClick] to toggle Guidelines\n\n/golf help for all commands" or "", color = "white"}}))
             else
@@ -572,7 +575,8 @@ function events.tick()
     end
 
     if golf.sequence == 2 then
-        if not ball.launched then    --On initialization of sequence 2
+        --Sequence: On initialization of sequence 2
+        if not ball.launched then
             ball.launched = true     
             step = 0
             golf.shotCount = golf.shotCount + 1
@@ -663,7 +667,8 @@ function events.tick()
     end
 
     if golf.sequence == 4 then
-        if not golf.inTheHole and player:isLoaded() then    --On initialization of sequence 4
+        --Sequence: On initialization of sequence 4
+        if not golf.inTheHole and player:isLoaded() then
             golf.inTheHole = true
 
             for _ = 1, 15 do
