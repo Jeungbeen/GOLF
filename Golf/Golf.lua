@@ -159,7 +159,7 @@ end
 ---@param a number Launch speed, determines the size of the parabola
 ---@return number  Distance between two points on the parabola
 local function ballFlightPathCalculation(m, a) 
-    if m < 0 then return nil end
+    if m <= 0 then return nil end
 
     return 2 * (a / math.sqrt(m))
 end
@@ -170,7 +170,7 @@ end
 ---@param c number Shift in y direction of the parabola
 ---@return number  y of the parabola on position x
 local function ballFlightPositionCalculation(x, m, a, c)
-    if m < 0 then return nil end
+    if m <= 0 then return nil end
     
     return (-m/a) * ((x-(a/(math.sqrt(m))))^2) + a + c
 end
@@ -627,7 +627,7 @@ function events.tick()
 
             indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Power\n", color = "white"}, {text = tostring(ball.launchSpeed.value), color = golfGUIColor}, {text = "\nDistance\n", color = "white"}, {text = tostring(math.floor(distanceCalculation(ball.origin.pos, ball.currentPos) * 100) / 100)}, {text = "m"}}))
             
-            if ballFlightPositionCalculation(step, m, ball.launchSpeed.value, c) == nil then return end
+            if golf.mode == 1 and ballFlightPositionCalculation(step, m, ball.launchSpeed.value, c) == nil then return end
 
             if golf.mode == 1 then
                 ball.currentPos = vec(ball.origin.pos.x + ball.origin.direction.x * step, ballFlightPositionCalculation(step, m, ball.launchSpeed.value, c), ball.origin.pos.z + ball.origin.direction.z * step)
@@ -722,7 +722,7 @@ function events.chat_send_message(msg)
         
         if string.sub(command, 1, 4) == ("help") then
             if host:isHost() then
-                host:setChatMessage(1, toJson({{text = "\n" .. golf.GUIHeader .. "\n\n\n", bold = true, color = golfGUIColor}, {text = "Renamed items needed\n\n", color = "white"}, {text = "  'Driver' / 'Hybrid' / 'Wedge'  ->  Long range shots\n  *Must look above 0 Degrees to use!\n\n  'Putter'  ->  Close range straight shots\n  'Flag'  ->  Use to place down flags/holes\n\n", color = "white", bold = false, italic = true}, {text = "Keybinds\n\n", color = "white"}, {text = "  [ALT] + [LClick]  ->  Swings golf club/places flag\n  [ALT] + [RClick]  ->  Toggles guidelines\n\n", color = "white", bold = false, italic = true}, {text = "Available Commands\n\n", color = "white"}, {text = "  /golf help  ->  Returns all commands\n  /golf reset  ->  Resets the game, does NOT reset your flags\n  /golf remove  ->  Removes ALL of your flags\n  /golf tp  ->  Teleports you to your golfball", color = "white", bold = false, italic = true}}), vec(1, 0, 0))
+                host:setChatMessage(1, toJson({{text = "\n" .. golf.GUIHeader .. "\n\n\n", bold = true, color = golfGUIColor}, {text = "Renamed items needed\n\n", color = "white"}, {text = "  'Driver' / 'Hybrid' / 'Wedge'  ->  Long range shots\n  *Must look above 0 Degrees to use!\n\n  'Putter'  ->  Close range straight shots\n  'Flag'  ->  Use to place down flags/holes\n\n", color = "white", bold = false, italic = true}, {text = "Keybinds\n\n", color = "white"}, {text = "  [ALT] + [LClick]  ->  Swings golf club/places flag\n  [ALT] + [RClick]  ->  Toggles guidelines\n\n", color = "white", bold = false, italic = true}, {text = "Available Commands\n\n", color = "white"}, {text = "  /golf help  ->  Returns all commands\n  /golf reset  ->  Resets the game, does NOT reset your flags\n  /golf remove  ->  Removes ALL of your flags\n  /golf tp  ->  Teleports you to your golfball", color = "white", bold = false, italic = true}}), vec(0, 0, 0))
             end
         return nil end
 

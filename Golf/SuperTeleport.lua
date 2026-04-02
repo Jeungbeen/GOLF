@@ -5,14 +5,14 @@
        |  |   |  ___/   |      __ <    |    |      |      |      ___/   |   |  __ <    |   
  _____/  \___/  _|     _____| _| \_\  _|   _____| _____| _____| _|     \___/  _| \_\  _|   
                                                                                            
-    ver. 0.2.1                             
+    ver. 0.1.0                             
     Made by @jeungbeen
 
 ]]--
 
 
 --#region "Config"
-local warpSound = "item.firecharge.use"
+local warpSound = "entity.enderman.teleport"
 local warpParticle = "poof"
 
 --#endregion
@@ -22,6 +22,7 @@ local warpParticle = "poof"
 function pings.superTeleport(destination)
     if not player:isLoaded() then return end
     local interval = 0
+    --destination = vec(math.floor(destination.x), math.floor(destination.y), math.floor(destination.z))
 
     teleportSequence = function()
         if interval <= 2 then
@@ -36,7 +37,7 @@ function pings.superTeleport(destination)
                 
                 sounds[warpSound]:setSubtitle(player:getName() .. " teleports"):setPos(player:getPos()):play():setVolume(0.3):setPitch(1.5)
 
-                if silly then
+                if silly and host:isHost() then
                     silly:setVel(vec(0, 0, 0))
                     silly:setPos(vec(player:getPos().x, 384, player:getPos().z))
                     silly:setVel(vec(0, 0, 0))
@@ -44,7 +45,7 @@ function pings.superTeleport(destination)
             end
 
             if interval == 1 and player:isLoaded() then
-                if silly then
+                if silly and host:isHost() then
                     silly:setVel(vec(0, 0, 0))
                     silly:setPos(vec(destination.x, 384, destination.z))
                     silly:setVel(vec(0, 0, 0))
@@ -52,18 +53,18 @@ function pings.superTeleport(destination)
             end
 
             if interval == 2 and player:isLoaded() then
-                if silly then
+                if silly and host:isHost() then
                     silly:setVel(vec(0, 0, 0))
                     silly:setPos(vec(player:getPos().x, destination.y, player:getPos().z))
                     silly:setVel(vec(0, 0, 0))
                 end
 
-                sounds[warpSound]:setSubtitle(player:getName() .. " teleports"):setPos(destination):play():setVolume(0.3):setPitch(1.5)
+                sounds[warpSound]:setSubtitle(player:getName() .. " teleports"):setPos(vec(destination.x, destination.y, destination.z)):play():setVolume(0.3):setPitch(1.5)
 
                 for _ = 1, 7 do
                     local dir = math.random() * math.pi * 2
                     particles[warpParticle]
-                        :pos(destination + vec(0, math.random() * 1.3,0))
+                        :pos(vec(destination.x, destination.y, destination.z) + vec(0, math.random() * 1.3,0))
                         :velocity(vec(math.cos(dir), math.random(10,150)/100, math.sin(dir)) * 0.05)
                         :spawn()
                 end
@@ -79,4 +80,11 @@ function pings.superTeleport(destination)
 
 end
 
+function summon(sender)
+    if world.getPlayers()[sender] and world.getPlayers()[sender]:isLoaded() then
+        pings.superTeleport(world.getPlayers()[sender]:getPos())
+        host:actionbar(sender .. " teleported you to " .. sender)
+        host:sendChatCommand("w " .. sender .. " Teleported Jeungbeen to you!")
+    end
+end
 --#endregion
