@@ -13,3 +13,5 @@
 
 ### Commands:
 *Type /golf help for all available commands*
+
+*SuperTeleport.lua is optional, however /golf tp needs it to function*
