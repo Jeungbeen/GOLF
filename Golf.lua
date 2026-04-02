@@ -190,6 +190,8 @@ local function showBallTrajectory(origin)
             
             local currentLandDistance = ballFlightPathCalculation(math.tan(math.rad((math.clamp(player:getLookDir().y * 90, 1, 89)))), ball.launchSpeed.value, origin.y)            
 
+            if not currentLandDistance or currentLandDistance >= math.huge then return end
+
             for i = 0, currentLandDistance, currentLandDistance / (ball.launchSpeed.value * 3) do
                 if ballFlightPositionCalculation(i, math.tan(math.rad((math.clamp(player:getLookDir().y * 90, 1, 89)))), ball.launchSpeed.value, origin.y) == nil then return end
                 
@@ -201,6 +203,8 @@ local function showBallTrajectory(origin)
         elseif golf.mode == 2 then
             local currentLandDistance = distanceCalculation(currentOriginPos, currentOriginPos + currentOriginDirection * (ball.launchSpeed.value / 2))            
             
+            if not currentLandDistance or currentLandDistance >= math.huge then return end
+
             for i = 0, currentLandDistance, currentLandDistance / ((ball.launchSpeed.value / 2) * 3) do
                 local trajectoryPos = vec(currentOriginPos.x + currentOriginDirection.x * i, currentOriginPos.y, currentOriginPos.z + currentOriginDirection.z * i)
 
