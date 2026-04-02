@@ -186,14 +186,14 @@ local function showBallTrajectory(origin)
         local currentOriginDirection = (player:getLookDir().x_z):normalize()
 
         if golf.mode == 1 then
-            if ballFlightPathCalculation(math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y)  == nil then return end
+            if ballFlightPathCalculation(math.tan(math.rad((math.clamp(player:getLookDir().y * 90, 1, 89)))), ball.launchSpeed.value, origin.y)  == nil then return end
             
-            local currentLandDistance = ballFlightPathCalculation(math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y)            
+            local currentLandDistance = ballFlightPathCalculation(math.tan(math.rad((math.clamp(player:getLookDir().y * 90, 1, 89)))), ball.launchSpeed.value, origin.y)            
 
             for i = 0, currentLandDistance, currentLandDistance / (ball.launchSpeed.value * 3) do
-                if ballFlightPositionCalculation(i, math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y) == nil then return end
+                if ballFlightPositionCalculation(i, math.tan(math.rad((math.clamp(player:getLookDir().y * 90, 1, 89)))), ball.launchSpeed.value, origin.y) == nil then return end
                 
-                local trajectoryPos = vec(currentOriginPos.x + currentOriginDirection.x * i, ballFlightPositionCalculation(i, math.tan(math.rad((player:getLookDir().y * 90))), ball.launchSpeed.value, origin.y), currentOriginPos.z + currentOriginDirection.z * i)
+                local trajectoryPos = vec(currentOriginPos.x + currentOriginDirection.x * i, ballFlightPositionCalculation(i, math.tan(math.rad((math.clamp(player:getLookDir().y * 90, 1, 89)))), ball.launchSpeed.value, origin.y), currentOriginPos.z + currentOriginDirection.z * i)
 
                 particles:newParticle(trajectoryParticle, trajectoryPos)
             end
@@ -241,6 +241,8 @@ end
 local function checkBallHitWall(currentPos, direction)
     if checkBallObstacle(currentPos, direction) then
         local block, hitPos, side = raycast:block(currentPos, vec(currentPos.x, -53, currentPos.z))
+        if block == nil then return end
+
         ball.currentGround = block:getPos().y
     end
 end
@@ -410,7 +412,7 @@ function events.mouse_press(btn, ctx, mod)
     --Limit sequence change when not holding a golf club or when ball is in the air, only allow it when not placing flags
     if not (golf.mode == 0 or golf.sequence == 3) and flags.place.sequence == 0 then
         if btn == 0 then 
-            if player:isLoaded() and not (math.tan(math.rad((player:getLookDir().y * 90))) <= 0 and golf.sequence == 1 and golf.mode == 1) and golf.sequence ~= 2 then
+            if player:isLoaded() and not (math.tan(math.rad((math.clamp(player:getLookDir().y * 90, 1, 89)))) <= 0 and golf.sequence == 1 and golf.mode == 1) and golf.sequence ~= 2 then
                 golf.sequence = golf.sequence + 1 
                 pings.syncSequence(golf.sequence)
 
