@@ -165,6 +165,14 @@ local function distanceCalculation(a, b)
     return dist
 end
 
+--Rounds a number to the specified decimal spaces
+---@param num number
+---@param numDecimalPlaces number
+---@return number|nil
+local function roundTo(num, numDecimalPlaces)
+  return tonumber(string.format("%." .. (numDecimalPlaces or 0) .. "f", num))
+end
+
 --Calculates the distance between two points via a parabola
 ---@param m number Slope of the parabola
 ---@param a number Launch speed, determines the size of the parabola
@@ -428,6 +436,10 @@ function events.mouse_press(btn, ctx, mod)
     if not (golf.mode == 0 or golf.sequence == 3) and flags.place.sequence == 0 then
         if btn == 0 then 
             if player:isLoaded() and not ((player:getLookDir().y * 90 < 1 or player:getLookDir().y * 90 > 89) and golf.sequence == 1 and golf.mode == 1) and golf.sequence ~= 2 then
+                if golf.sequence == 4 and host:isHost() then
+                    sounds["block.iron_trapdoor.open"]:setSubtitle(toJson({{text = "GOLF reset!", bold = true, color = golfGUIColor}})):setPos(player:getPos()):play():setVolume(0.7):setPitch(1.2) 
+                end
+
                 golf.sequence = golf.sequence + 1 
 
                 pings.syncSequence(golf.sequence)
@@ -512,12 +524,12 @@ function events.tick()
             for _, _i in ipairs(v:getVariable("GOLF")[1]) do
                 table.insert(flags.globalFlags, _i)
                 if host:isHost() then
-                    table.insert(flagText, {text = _i[1] .. "\n", bold = true, color = "white"})
+                    table.insert(flagText, {text = _i[1] .. "\n", bold = true, italic = true, color = "white"})
                 end
             end    
             if v:getVariable("GOLF")[2][1] ~= 0 and host:isHost() then
                 if v:getVariable("GOLF")[2][1] ~= 4 then
-                    table.insert(playerDataText, {{text = k .. " - ", bold = true, italic = false, color = "white"}, {text = v:getVariable("GOLF")[2][2] ~= 1 and tostring(v:getVariable("GOLF")[2][2]) .. " shots\n" or tostring(v:getVariable("GOLF")[2][2]) .. " shot\n", bold = true, italic = true, color = golfGUIColor}})
+                    table.insert(playerDataText, {{text = k .. "  ", bold = true, italic = true, color = "white"}, {text = v:getVariable("GOLF")[2][2] ~= 1 and tostring(v:getVariable("GOLF")[2][2]) .. " shots\n" or tostring(v:getVariable("GOLF")[2][2]) .. " shot\n", bold = true, italic = true, color = golfGUIColor}})
                 else
                     table.insert(playerDataText, {{text = k .. " - ", bold = true, italic = false, color = "white"}, {text = "In the Hole!", bold = true, italic = false, color = golfGUIColor}})
                 end
@@ -526,7 +538,7 @@ function events.tick()
     end
 
     if host:isHost() then
-        leaderboardText:setText(toJson({{text = #flagText ~= 0 and "Flags\n\n" or "", color = golfGUIColor, bold = true}, #flagText ~= 0 and {flagText, {text = #playerDataText ~= 0 and "\n\n" or ""}} or {text = ""}, {text = #playerDataText ~= 0 and "Players\n\n" or "", color = golfGUIColor, bold = true}, #playerDataText ~= 0 and playerDataText or {text = ""}}))
+        leaderboardText:setText(toJson({{text = #flagText ~= 0 and "Flags\n\n" or "", color = golfGUIColor, bold = true, italic = false}, #flagText ~= 0 and {flagText, {text = #playerDataText ~= 0 and "\n\n" or ""}} or {text = ""}, {text = #playerDataText ~= 0 and "Players\n\n" or "", color = golfGUIColor, bold = true, italic = false}, #playerDataText ~= 0 and playerDataText or {text = ""}}))
     end
 
     --Checks if you are holding a golf related item
@@ -547,7 +559,7 @@ function events.tick()
         flags.place.potentialFlagRot = player:getRot()
 
         if host:isHost() then
-            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = "Place flag at\n", color = "white"}, {text = string.gsub(tostring(vec(math.floor(flags.place.potentialFlagPos.x * 100) / 100, math.floor(flags.place.potentialFlagPos.y * 100) / 100, math.floor(flags.place.potentialFlagPos.z * 100) / 100)), "[{}]", "")}, {text = "\n\n[ALT] + [LClick] to place", color = "white"}}))
+            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = "Place flag at\n", color = "white"}, {text = string.gsub(tostring(vec(roundTo(math.floor(flags.place.potentialFlagPos.x * 100) / 100, 1), roundTo(math.floor(flags.place.potentialFlagPos.y * 100) / 100, 1), roundTo(math.floor(flags.place.potentialFlagPos.z * 100) / 100, 1))), "[{}]", "")}, {text = "\n\n[ALT] + [LClick] to place", color = "white"}}))
         end
     elseif flags.place.sequence == 2 and host:isHost() then
         indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = "Type /golf 'Your flag name' to add this flag's name\n\n[ALT] + [LClick] to cancel", color = "white"}}))
@@ -690,7 +702,7 @@ function events.tick()
 
     if golf.sequence == 3 then
         if host:isHost() then
-            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Go to your golfball to proceed!\n", color = "white"}, {text = string.gsub(tostring(vec(math.floor(landPos.x * 100) / 100, math.floor(landPos.y * 100) / 100, math.floor(landPos.z * 100) / 100)), "[{}]", "")}}))
+            indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Go to your golfball to proceed!\n", color = "white"}, {text = string.gsub(tostring(vec(roundTo(math.floor(flags.place.potentialFlagPos.x * 100) / 100, 1), roundTo(math.floor(flags.place.potentialFlagPos.y * 100) / 100, 1), roundTo(math.floor(flags.place.potentialFlagPos.z * 100) / 100, 1))), "[{}]", "")}}))
         end
         
         particles:newParticle(ballParticle, landPos)
