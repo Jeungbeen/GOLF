@@ -70,6 +70,7 @@ golf.GUIHeader = golfGUITitle
 ---@field currentPos Vector3
 ---@field currentGround number
 ---@field launched boolean
+---@field landed boolean
 ---@type Ball
 local ball = {}
 ball.origin = {}
@@ -83,6 +84,7 @@ ball.launchSpeed.clamp = {1, 30}
 ball.currentPos = vec(0, 0, 0)
 ball.currentGround = 0
 ball.launched = false
+ball.landed = false
 
 
 
@@ -336,7 +338,7 @@ end
 ---@param hardReset boolean Set true to reset every state to the beginning
 function pings.resetSequence(hardReset) 
     step = 0
-    ball.launched = false
+    ball.launched, ball.landed = false, false
     golf.sequence = hardReset and 0 or 1
 
     indicatorText:setText("")
@@ -379,6 +381,7 @@ function pings.syncBallOriginPos(currentPos, _m, _c, clamp, speed)
     ball.launchSpeed.clamp = clamp
     ball.launchSpeed.value = speed
 
+    if not player:isLoaded() then return end
     sounds[hitSound]:setSubtitle(player:getName() .. " takes a shot"):setPos(player:getPos()):setVolume(0.5):setPitch(math.clamp(0.1 * (ball.launchSpeed.clamp[2] - ball.launchSpeed.value), 0.5, 1.7)):play()
 end
 
@@ -531,7 +534,7 @@ function events.tick()
                 if v:getVariable("GOLF")[2][1] ~= 4 then
                     table.insert(playerDataText, {{text = k .. "  ", bold = true, italic = true, color = "white"}, {text = v:getVariable("GOLF")[2][2] ~= 1 and tostring(v:getVariable("GOLF")[2][2]) .. " shots\n" or tostring(v:getVariable("GOLF")[2][2]) .. " shot\n", bold = true, italic = true, color = golfGUIColor}})
                 else
-                    table.insert(playerDataText, {{text = k .. " - ", bold = true, italic = false, color = "white"}, {text = "In the Hole!", bold = true, italic = false, color = golfGUIColor}})
+                    table.insert(playerDataText, {{text = k .. " - ", bold = true, italic = false, color = "white"}, {text = "In the Hole!\n", bold = true, italic = false, color = golfGUIColor}})
                 end
             end
         end
@@ -568,7 +571,7 @@ function events.tick()
 
 
     if golf.sequence == 1 then
-        ball.launched = false
+        ball.launched, ball.landed = false, false
 
         ball.launchSpeed.clamp = golf.mode == 1 and {1, 30} or golf.mode == 2 and {1, 10} or {1, 1}
 
@@ -627,7 +630,7 @@ function events.tick()
 
     if golf.sequence == 2 then
         if not ball.launched and player:isLoaded() then    --On initialization of sequence 2
-            ball.launched = true     
+            ball.launched, ball.landed = true, false 
             step = 0
             golf.shotCount = golf.shotCount + 1
             
@@ -705,6 +708,12 @@ function events.tick()
             indicatorText:setText(toJson({{text = golf.GUIHeader .. "\n\n", bold = true, color = golfGUIColor}, {text = golf.shotCount == 0 and "" or golf.shotCount == 1 and tostring(golf.shotCount) .. " shot taken\n\n" or tostring(golf.shotCount) .. " shots taken\n\n", bold = true, italic = true, color = golfGUIColor}, {text = "Go to your golfball to proceed!\n", color = "white"}, {text = string.gsub(tostring(vec(roundTo(math.floor(flags.place.potentialFlagPos.x * 100) / 100, 1), roundTo(math.floor(flags.place.potentialFlagPos.y * 100) / 100, 1), roundTo(math.floor(flags.place.potentialFlagPos.z * 100) / 100, 1))), "[{}]", "")}}))
         end
         
+        if not ball.landed then
+            ball.landed = true
+            pings.syncLandPos(landPos)
+            pings.syncBallPos(landPos)
+        end
+
         particles:newParticle(ballParticle, landPos)
         
         --Wait for player to go near the ball
